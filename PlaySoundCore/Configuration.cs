@@ -1,75 +1,82 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using J4JSoftware.Logging;
+using Serilog;
 
 namespace PlaySoundCore
 {
     public class Configuration
     {
-        private string[] _audioExt;
-        private DirectoryInfo _dirInfo;
+        private IJ4JLogger? _logger;
 
-        public string[] Extensions
+        public IJ4JLogger? Logger
         {
-            get
+            get => _logger;
+
+            set
             {
-                if( _audioExt == null || _audioExt.Length == 0 )
-                    _audioExt = new[] { ".wav", ".mp3" };
-
-                return _audioExt;
+                _logger = value;
+                _logger?.SetLoggedType(GetType());
             }
-
-            set => _audioExt = value;
         }
 
-        public FileInfo SoundFile { get; set; }
+        public bool CaseSensitiveFileSystem { get; set; }
+        public bool HelpRequested { get; set; }
 
-        public DirectoryInfo SoundDirectory
+        public List<string> Extensions { get; set; } = new() { ".wav", ".mp3" };
+        public List<string> SoundFiles { get; set; } = new();
+        public string SoundDirectory { get; set; } = Environment.CurrentDirectory;
+
+        public bool GetFileToPlay(out string? result)
         {
-            get
-            {
-                if( _dirInfo == null )
-                {
-                    if( SoundFile != null )
-                        _dirInfo = SoundFile.Directory;
-                }
+            result = null;
 
-                return _dirInfo;
+            var choices = new List<string>();
+
+            foreach (var individual in SoundFiles)
+            {
+                var filePath = Path.IsPathRooted(individual)
+                    ? individual
+                    : Path.Combine(Environment.CurrentDirectory, individual);
+
+                if (File.Exists(filePath))
+                    choices.Add(individual);
+                else Logger?.Error<string>("Sound file '{0}' not found", filePath);
             }
 
-            set => _dirInfo = value;
-        }
+            var directory = Path.IsPathRooted(SoundDirectory)
+                ? SoundDirectory
+                : Path.Combine(Environment.CurrentDirectory, SoundDirectory);
 
-        public bool GetSoundFile( out string fileName )
-        {
-            fileName = null;
+            if (!Directory.Exists(directory))
+                Logger?.Error<string>("Sound directory '{0}' not found", directory);
 
-            if( SoundFile != null && File.Exists( SoundFile.FullName ) )
+            foreach (var individual in Directory.GetFiles(directory, "*.*", SearchOption.AllDirectories)
+                         .Where(x => Extensions.Any(y => y.Equals(
+                             Path.GetExtension(x),
+                             CaseSensitiveFileSystem
+                                 ? StringComparison.Ordinal
+                                 : StringComparison.OrdinalIgnoreCase)))
+                    )
             {
-                fileName = SoundFile.FullName;
-                return true;
+                if (File.Exists(individual))
+                    choices.Add(individual);
+                else Logger?.Error<string>("Sound file '{0}' not found", individual);
             }
 
-            if( SoundDirectory == null || !Directory.Exists(SoundDirectory.FullName) )
-                return false;
+            if (!choices.Any())
+                Logger?.Error("No sound files found");
+            else
+            {
+                var random = new Random(Guid.NewGuid().GetHashCode());
+                result = choices[random.Next(choices.Count)];
+            }
 
-            var files = Directory.GetFiles(
-                    SoundDirectory.FullName,
-                    "*.*",
-                    searchOption : SearchOption.AllDirectories )
-                .Where( f =>
-                    Extensions.Any( x => x.Equals( Path.GetExtension( f ), StringComparison.OrdinalIgnoreCase ) ) )
-                .ToList();
-
-            if( files.Count == 0 )
-                return false;
-
-            var random = new Random();
-
-            fileName = files[ random.Next( files.Count ) ];
-
-            return true;
+            return result != null;
         }
     }
 }
