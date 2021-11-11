@@ -8,23 +8,6 @@ namespace PlaySoundCore
 {
     public class Configuration
     {
-        private IJ4JLogger? _logger;
-
-        public Configuration()
-        {
-        }
-
-        public IJ4JLogger? Logger
-        {
-            get => _logger;
-
-            set
-            {
-                _logger = value;
-                _logger?.SetLoggedType( GetType() );
-            }
-        }
-
         public bool CaseSensitiveFileSystem { get; set; }
         public bool HelpRequested { get; set; }
 
@@ -46,15 +29,11 @@ namespace PlaySoundCore
 
                 if ( File.Exists( filePath ) )
                     choices.Add( individual );
-                else Logger?.Error<string>( "Sound file '{0}' not found", filePath );
             }
 
             var directory = Path.IsPathRooted( SoundDirectory )
                                 ? SoundDirectory
                                 : Path.Combine( Environment.CurrentDirectory, SoundDirectory );
-
-            if ( !Directory.Exists( directory ) )
-                Logger?.Error<string>( "Sound directory '{0}' not found", directory );
 
             foreach ( var individual in Directory.GetFiles( directory, "*.*", SearchOption.AllDirectories )
                                                  .Where( x => Extensions.Any( y => y.Equals( Path.GetExtension( x ),
@@ -66,12 +45,9 @@ namespace PlaySoundCore
             {
                 if ( File.Exists( individual ) )
                     choices.Add( individual );
-                else Logger?.Error<string>( "Sound file '{0}' not found", individual );
             }
 
-            if ( !choices.Any() )
-                Logger?.Error( "No sound files found" );
-            else
+            if ( choices.Any() )
             {
                 var random = new Random( Guid.NewGuid().GetHashCode() );
                 result = choices[ random.Next( choices.Count ) ];

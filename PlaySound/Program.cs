@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Autofac;
 using J4JSoftware.Configuration.CommandLine;
 using J4JSoftware.Configuration.J4JCommandLine;
@@ -68,7 +70,7 @@ namespace PlaySoundCore
             }
             else
             {
-                var player = new SoundPlayer( fileToPlay );
+                var player = new SoundPlayer( fileToPlay! );
                 player.PlaySync();
             }
         }
@@ -95,13 +97,7 @@ namespace PlaySoundCore
 
         private static void SetupDependencyInjection(HostBuilderContext hbc, ContainerBuilder builder)
         {
-            builder.Register(c =>
-                {
-                    var retVal = hbc.Configuration.Get<Configuration>();
-                    retVal.Logger = c.Resolve<IJ4JLogger>();
-
-                    return retVal;
-                })
+            builder.Register(c => hbc.Configuration.Get<Configuration>() )
                 .AsSelf();
         }
 
