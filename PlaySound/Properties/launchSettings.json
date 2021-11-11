@@ -2,7 +2,7 @@
   "profiles": {
     "PlaySoundCore": {
       "commandName": "Project",
-      "commandLineArgs": "/f C:\\Sounds\\Fireworks.wav"
+      "commandLineArgs": "/d c:\\Sounds"
     }
   }
 }
